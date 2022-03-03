@@ -1,0 +1,7 @@
+row_list = []
+row_list2 = []
+for g in progressbar(df.player.unique(),'Computing: ',20):
+    row_list.append(GuessQuality(g,df))
+    row_list2.append(GuessQuality(g,df2))
+pb = pd.DataFrame(row_list).sort_values(by='ev',ascending=False).reset_index(drop=True)
+pb2 = pd.DataFrame(row_list2).sort_values(by='ev',ascending=False).reset_index(drop=True)

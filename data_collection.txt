@@ -1,0 +1,100 @@
+from nba_api.stats.endpoints import PlayerDashboardByYearOverYear as pdoyoy
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+import matplotlib.pyplot as plt
+from selenium import webdriver
+from bs4 import BeautifulSoup
+import pandas as pd
+import numpy as np
+import itertools
+import requests
+import string
+import json
+import sys
+
+# df = pd.read_csv('C:\\Users\\cheem\\Jupiter\\Python Scripts\\poeltl\\data\\poeltlFull.csv')
+# df2 = pd.read_csv('C:\\Users\\cheem\\Jupiter\\Python Scripts\\poeltl\\data\\poeltlReduced.csv')
+
+def progressbar(it, prefix="", size=60, file=sys.stdout):
+    count = len(it)
+    def show(j):
+        x = int(size*j/count)
+        file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), j, count))
+        file.flush()        
+    show(0)
+    for i, item in enumerate(it):
+        yield item
+        show(i+1)
+    file.write("\n")
+    file.flush()
+    
+def height_convert(ht):
+    feet,inches = [int(x) for x in ht.split('-')]
+    return feet*12+inches
+    
+headers = {'Host': 'stats.nba.com','Accept': 'application/json, text/plain, */*','x-nba-stats-token': 'true','User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36','x-nba-stats-origin': 'stats','Origin': 'https://www.nba.com','Referer': 'https://www.nba.com/','Accept-Encoding': 'gzip, deflate, br','Accept-Language': 'en-US,en;q=0.9}'}
+
+###
+
+db = pd.read_csv('C:\\Users\\cheem\\Jupiter\\Python Scripts\\CSV\\nbaTeamInfo.csv')
+
+tf_list = []
+for x in progressbar(db.teamId,'Computing: ',30):
+    url = 'https://www.nba.com/team/'+str(x)
+    
+    req = requests.get(url, headers)
+    soup = BeautifulSoup(req.content, 'html.parser')
+    
+    tb = soup.find_all('table')[0]
+    tf = pd.read_html(str(tb),encoding='utf-8',header=0)[0]
+    
+    href = [np.where(tag.has_attr('href'),tag.get('href'),
+                     'no link') for tag in tb.find_all('a')]
+    tf['playerId'] = [int(x.item().split('player/')[1].split('/')[0]) for x in href]
+    tf['teamId'] = x
+    
+    tf_list.append(tf)
+    
+df = pd.concat(tf_list).reset_index(drop=True)
+
+df = pd.merge(df,db,on='teamId')
+
+df = df[['Player','playerId','team','teamId','conference','division','Age','Pos',
+         '#','Height']]
+df.columns = ['player','playerId','team','teamId','conference','division','age',
+              'position','jersey','height']
+
+df.height = df.height.apply(height_convert)
+
+#############################################
+#############################################
+
+row_list = []
+for n in progressbar(df.playerId,'Computing: ',20):  
+    url = 'https://www.nba.com/stats/player/'+str(n)
+    req = requests.get(url, headers)
+    soup = BeautifulSoup(req.content, 'html.parser')
+
+    info = [x.text.strip() for x in soup.find_all(attrs={'ng-if':'playerInfo.TEAM_ID != \'0\''})[0].find_all('span')]
+
+    tf = pd.DataFrame(pdoyoy(player_id=n).get_normalized_dict()['ByYearPlayerDashboard'])
+    
+    if tf.shape == (0,0):
+        teams = np.nan
+    else:
+        teams = [x for x in list(tf.TEAM_ABBREVIATION.unique()) if x != 'TOT']
+        teams = '.'.join(teams)
+
+    dict1 = {'playerId':n,'teams':teams}
+
+    row_list.append(dict1)
+    
+tf = pd.DataFrame(row_list)
+    
+df = pd.merge(df,tf,on='playerId')
+df = df.sort_values(by='player').reset_index(drop=True)
+
+df.teams.fillna(df.team, inplace=True)

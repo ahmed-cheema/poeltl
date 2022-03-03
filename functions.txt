@@ -1,0 +1,306 @@
+# team:
+#   - black: not on team
+#   - yellow: was on team
+#   - green: on team
+# conference:
+#   - black: not in conf
+#   - green: in conf
+# division:
+#   - black: not in div
+#   - green: in div
+# position:
+#   - black: no match
+#   - yellow: partial match
+#   - green: match
+# height (arrow):
+#   - black: not within two inches
+#   - yellow: within two inches
+#   - green: correct
+# age (arrow):
+#   - black: not within two years
+#   - yellow: within two years
+#   - green: correct
+# jersey (arrow):
+#   - black: not within two digits
+#   - yellow: within two digits
+#   - green: correct
+
+## Outputs dictionary with information comparing the guess to the answer 
+##
+def GuessInformation(guess,answer):
+    gf = df[df.player == guess].reset_index(drop=True)
+    af = df[df.player == answer].reset_index(drop=True)
+    
+    team = None
+    oldTeam = None
+    notTeam = None
+    notOldTeam = None
+    
+    if af.team[0] == gf.team[0]:
+        team = gf.team[0]
+    elif gf.team[0] in af.teams[0]:
+        notTeam = gf.team[0]
+        oldTeam = gf.team[0]
+    else:
+        notTeam = gf.team[0]
+        notOldTeam = gf.team[0]
+        
+    conference = None
+    notConference = None
+    
+    if af.conference[0] == gf.conference[0]:
+        conference = gf.conference[0]
+    else:
+        notConference = gf.conference[0]
+    
+    division = None
+    notDivision = None
+    
+    if af.division[0] == gf.division[0]:
+        division = gf.division[0]
+    else:
+        notDivision = gf.division[0]
+    
+    position = None
+    includesPosition = None
+    notIncludePosition = None
+    
+    if af.position[0] == gf.position[0]:
+        position = gf.position[0]
+    elif any(pos in af.position[0] for pos in gf.position[0].split('-')):
+        if len(gf.position[0].split('-')) == 0:
+            includesPosition = gf.position[0]
+        else:
+            includesPosition = '-'.join(gf.position[0].split('-'))
+    else:
+        notIncludePosition = '-'.join(gf.position[0].split('-'))
+        
+    height = None
+    htYellow = False
+    htGuess = None
+    htArrow = None
+    
+    if af.height[0] == gf.height[0]:
+        height = gf.height[0]
+    else:
+        htGuess = gf.height[0]
+        
+        if af.height[0] > gf.height[0]:
+            htArrow = 'up'
+        elif af.height[0] < gf.height[0]:
+            htArrow = 'down'    
+    
+        if abs(af.height[0]-gf.height[0]) <= 2:
+            htYellow = True
+            
+    age = None
+    ageYellow = False
+    ageGuess = None
+    ageArrow = None
+    
+    if af.age[0] == gf.age[0]:
+        age = gf.age[0]
+    else:
+        ageGuess = gf.age[0]
+        
+        if af.age[0] > gf.age[0]:
+            ageArrow = 'up'
+        elif af.age[0] < gf.age[0]:
+            ageArrow = 'down'    
+    
+        if abs(af.age[0]-gf.age[0]) <= 2:
+            ageYellow = True
+            
+    no = None
+    noYellow = False
+    noGuess = None
+    noArrow = None
+    noJersey = False
+    
+    if (np.isnan(af.jersey[0])) or (np.isnan(gf.jersey[0])):
+        noJersey = True    
+    elif af.jersey[0] == gf.jersey[0]:
+        no = gf.jersey[0]
+    else:
+        noGuess = gf.jersey[0]
+        
+        if af.jersey[0] > gf.jersey[0]:
+            noArrow = 'up'
+        elif af.jersey[0] < gf.jersey[0]:
+            noArrow = 'down'    
+    
+        if abs(af.jersey[0]-gf.jersey[0]) <= 2:
+            noYellow = True
+            
+    return {'team':team,'oldTeam':oldTeam,'notTeam':notTeam,'notOldTeam':notOldTeam,
+     'conference':conference,'notConference':notConference,'division':division,
+     'notDivision':notDivision,'position':position,'includesPosition':includesPosition,
+     'notIncludePosition':notIncludePosition,'height':height,'htYellow':htYellow,
+     'htGuess':htGuess,'htArrow':htArrow,'age':age,'ageYellow':ageYellow,
+     'ageGuess':ageGuess,'ageArrow':ageArrow,'no':no,'noYellow':noYellow,
+     'noGuess':noGuess,'noArrow':noArrow,'noJersey':noJersey}
+
+
+## Creates colorful diagram representing the output of GuessInformation
+#
+def ColorGuess(gi):
+    G = '🟩'
+    Y = '🟨'
+    B = '⬛'
+            
+    colors = []
+    
+    if gi['team'] is not None:
+        colors.append(G)
+    elif gi['oldTeam'] is not None:
+        colors.append(Y)
+    else:
+        colors.append(B)
+        
+    if gi['conference'] is not None:
+        colors.append(G)
+    else:
+        colors.append(B)
+        
+    if gi['division'] is not None:
+        colors.append(G)
+    else:
+        colors.append(B)
+        
+    if gi['position'] is not None:
+        colors.append(G)
+    elif gi['includesPosition'] is not None:
+        colors.append(Y)
+    else:
+        colors.append(B)
+        
+    if gi['height'] is not None:
+        colors.append(G)
+    elif gi['htYellow']:
+        colors.append(Y)
+    else:
+        colors.append(B)
+        
+    if gi['age'] is not None:
+        colors.append(G)
+    elif gi['ageYellow']:
+        colors.append(Y)
+    else:
+        colors.append(B)
+      
+    if gi['noJersey']:
+        colors.append(B)
+    elif gi['no'] is not None:
+        colors.append(G)
+    elif gi['noYellow']:
+        colors.append(Y)
+    else:
+        colors.append(B)
+        
+    return ''.join(colors)
+
+def PossibleAnswers(gi,dataframe):
+    tf = dataframe.copy()
+    
+    if gi['team']:
+        tf = tf[tf.team == gi['team']]
+    else:
+        tf = tf[tf.team != gi['notTeam']]
+        if gi['oldTeam']:
+            tf = tf[tf.teams.str.contains(gi['oldTeam'])]
+        else:
+            tf = tf[~tf.teams.str.contains(gi['notOldTeam'])]
+    
+    if gi['conference']:
+        tf = tf[tf.conference == gi['conference']]
+    else:
+        tf = tf[~(tf.conference == gi['conference'])]
+        
+    if gi['division']:
+        tf = tf[tf.division == gi['division']]
+    else:
+        tf = tf[~(tf.division == gi['notDivision'])]
+        
+    if gi['position']:
+        tf = tf[tf.position == gi['position']]
+    else:
+        if gi['includesPosition']:
+            tf = tf[tf.position != gi['includesPosition']]
+            pos = gi['includesPosition'].split('-')
+            if len(pos) == 2:
+                tf = tf[(tf.position.str.contains(pos[0])) | (tf.position.str.contains(pos[1]))]
+            else:
+                tf = tf[tf.position.str.contains(pos[0])]
+        else:
+            tf = tf[tf.position != gi['notIncludePosition']]
+            pos = gi['notIncludePosition'].split('-')
+            if len(pos) == 2:
+                tf = tf[(~tf.position.str.contains(pos[0])) & (~tf.position.str.contains(pos[1]))]
+            else:
+                tf = tf[~tf.position.str.contains(pos[0])]
+                
+    if gi['height']:
+        tf = tf[tf.height == gi['height']]
+    else:
+        if gi['htArrow'] == 'down':
+            tf = tf[tf.height < gi['htGuess']]
+        if gi['htArrow'] == 'up':
+            tf = tf[tf.height > gi['htGuess']]
+        if gi['htYellow']:
+            tf = tf[(tf.height <= gi['htGuess']+2) & (tf.height >= gi['htGuess']-2)]
+        else:
+            tf = tf[~(tf.height <= gi['htGuess']+2) | ~(tf.height >= gi['htGuess']-2)]
+            
+    if gi['age']:
+        tf = tf[tf.age == gi['age']]
+    else:
+        if gi['ageArrow'] == 'down':
+            tf = tf[tf.age < gi['ageGuess']]
+        if gi['ageArrow'] == 'up':
+            tf = tf[tf.age > gi['ageGuess']]
+        if gi['ageYellow']:
+            tf = tf[(tf.age <= gi['ageGuess']+2) & (tf.age >= gi['ageGuess']-2)]
+        else:
+            tf = tf[~(tf.age <= gi['ageGuess']+2) | ~(tf.age >= gi['ageGuess']-2)]
+    
+    if gi['noJersey']:
+        return tf
+    elif not (gi['no'] is None):
+        tf = tf[tf.jersey == gi['no']]
+    else:
+        if gi['noArrow'] == 'down':
+            tf = tf[tf.jersey < gi['noGuess']]
+        if gi['noArrow'] == 'up':
+            tf = tf[tf.jersey > gi['noGuess']]
+        if gi['noYellow']:
+            tf = tf[(tf.jersey <= gi['noGuess']+2) & (tf.jersey >= gi['noGuess']-2)]
+        else:
+            tf = tf[~(tf.jersey <= gi['noGuess']+2) | ~(tf.jersey >= gi['noGuess']-2)]
+    
+    return tf
+
+
+def GuessQuality(player,dataframe):
+    info_list = []
+    for x in dataframe.player.unique():
+        gi = GuessInformation(player,x)
+        pa = PossibleAnswers(gi,dataframe)
+        
+        poss = pa.shape[0]
+        decrease = (dataframe.shape[0]-poss)/dataframe.shape[0]
+        
+        info_list.append({'gi':gi,'poss':poss,'decrease':decrease})
+    il = pd.DataFrame(info_list).reset_index(drop=True)
+    il.gi = il.gi.astype(str)
+    
+    il = il.groupby('gi').agg({'gi':'count','poss':'mean','decrease':'mean'})
+    il.columns = ['freq','poss','decrease']
+    il = il.reset_index(drop=False)
+    
+    il.freq /= il.freq.sum()
+    
+    ev = (il[['freq']].values*il[['decrease']].values).sum()
+    meanPoss = (il[['freq']].values*il[['poss']].values).sum()
+    maxPoss = il.poss.max()
+    
+    return {'player':player,'meanPoss':meanPoss,'maxPoss':maxPoss,'ev':ev}
