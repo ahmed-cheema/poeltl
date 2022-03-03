@@ -15,9 +15,6 @@ import string
 import json
 import sys
 
-# df = pd.read_csv('C:\\Users\\cheem\\Jupiter\\Python Scripts\\poeltl\\data\\poeltlFull.csv')
-# df2 = pd.read_csv('C:\\Users\\cheem\\Jupiter\\Python Scripts\\poeltl\\data\\poeltlReduced.csv')
-
 def progressbar(it, prefix="", size=60, file=sys.stdout):
     count = len(it)
     def show(j):
